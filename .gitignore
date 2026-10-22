@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/.venv/
+.venv/
+env/
+venv/
+ENV/
+*.sqlite3
+*.db
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Builds
+dist/
+build/
+frontend/dist/
+
+# Tests & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+
+# Operating System & IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Large Model weights (keep in local cache or storage)
+*.pt
+*.onnx
+*.engine
+yolo11n.pt
+backend/models/weights/
+
+# Video & Media storage uploads
+backend/storage/uploads/
+backend/storage/processed/
