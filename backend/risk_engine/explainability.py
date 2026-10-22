@@ -1,6 +1,7 @@
 """
 SafeStack AI - Explainability Engine
 Produces clear, auditable evidence breakdowns and actionable coaching recommendations.
+Integrates Module 5: Bayesian Belief Network for Latent Damage Probability.
 """
 
 from typing import List
@@ -12,6 +13,7 @@ from backend.models.schemas import (
     ExplainabilityFactor
 )
 from backend.risk_engine.scorer import GradedRiskScorer
+from backend.risk_engine.bayesian_network import bayesian_engine
 
 class ExplainabilityEngine:
     def __init__(self):
@@ -102,7 +104,25 @@ class ExplainabilityEngine:
                 evidence=f"Occurrence #{bay_frequency} detected in this loading bay during the active shift"
             ))
 
-        summary = f"{behavior_name} observed for {product_category.value}. Assigned risk score {final_score}/100 based on kinematic physics, category vulnerability, and bay history."
+        # 5. Module 5 Bayesian Inference (Latent Damage State Reasoning)
+        bayes_evidence = bayesian_engine.discretize_evidence(
+            product_category_str=product_category.value,
+            drop_height_m=metrics.drop_height_m,
+            kinetic_energy_j=metrics.kinetic_impact_energy_j,
+            rough_decel_mps2=metrics.rough_impact_decel_mps2,
+            tilt_deg=metrics.tilt_angle_deg,
+            overhang_pct=metrics.pallet_overhang_pct
+        )
+        bayes_result = bayesian_engine.infer_damage_probability(bayes_evidence)
+
+        factors.append(ExplainabilityFactor(
+            factor_name="Bayesian Latent Damage Inference (Module 5)",
+            weight=0.25,
+            contribution_pts=round(bayes_result.p_severe_loss * 25.0, 1),
+            evidence=f"P(SevereLoss | Evidence) = {bayes_result.p_severe_loss * 100:.1f}% [{bayes_result.most_probable_state}] via Bayes Rule"
+        ))
+
+        summary = f"{behavior_name} observed for {product_category.value}. Assigned risk score {final_score}/100 based on kinematic physics, category vulnerability, and bay history. Bayesian Inferred State: {bayes_result.most_probable_state} ({bayes_result.confidence_pct}% confidence)."
         prevention = self.PREVENTION_GUIDELINES.get(
             behavior_type,
             "Review bay operational standards and verify handling equipment compliance."
@@ -116,5 +136,6 @@ class ExplainabilityEngine:
             frequency_multiplier=freq_mult,
             final_score=final_score,
             factors=factors,
-            prevention_recommendation=prevention
+            prevention_recommendation=prevention,
+            bayesian_inference=bayes_result.model_dump()
         )

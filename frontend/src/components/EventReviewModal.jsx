@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Play, Pause, AlertTriangle, ShieldCheck, CheckCircle2, FileText, ChevronRight, Activity, Info, Sparkles } from 'lucide-react';
+import { X, Play, Pause, AlertTriangle, ShieldCheck, CheckCircle2, FileText, ChevronRight, Activity, Info, Sparkles, Network, GitBranch } from 'lucide-react';
 import { fetchEventRCA, submitReview } from '../services/api';
 
 export default function EventReviewModal({
@@ -39,6 +39,7 @@ export default function EventReviewModal({
   const telemetry = event.kinematic_telemetry || {};
   const explain = event.explainability || {};
   const factors = explain.factors || [];
+  const bayes = explain.bayesian_inference;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
@@ -185,6 +186,71 @@ export default function EventReviewModal({
                   </div>
                 </div>
               </div>
+
+              {/* Module 5: Bayesian Belief Network Inference Card */}
+              {bayes && (
+                <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-950/40 to-slate-950 border border-indigo-500/40 space-y-3 shadow-lg">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-900/50 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Network className="w-4 h-4 text-indigo-400" />
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 uppercase tracking-wider">
+                        Module 5: Bayesian Belief Network
+                      </span>
+                      <span className="text-xs font-semibold text-white">Latent Internal Damage Inference</span>
+                    </div>
+                    <span className="text-xs font-mono text-indigo-300 font-bold bg-indigo-900/40 px-2 py-0.5 rounded border border-indigo-700/50">
+                      P(SevereLoss | e) = {(bayes.p_severe_loss * 100).toFixed(1)}%
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Under sensor observation uncertainty, the internal state of sealed packaging is inferred via <strong>Bayes' Theorem</strong> across the CPT distribution conditioned on observed drop height, impact deceleration, and cargo fragility.
+                  </p>
+
+                  {/* Posterior Probability Bars */}
+                  <div className="grid grid-cols-3 gap-2.5 text-center">
+                    <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">P(Intact | e)</span>
+                      <span className="text-base font-bold font-mono text-emerald-400">
+                        {(bayes.p_intact * 100).toFixed(1)}%
+                      </span>
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div className="bg-emerald-500 h-full rounded-full transition-all" style={{ width: `${bayes.p_intact * 100}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">P(Cosmetic | e)</span>
+                      <span className="text-base font-bold font-mono text-amber-400">
+                        {(bayes.p_cosmetic * 100).toFixed(1)}%
+                      </span>
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div className="bg-amber-500 h-full rounded-full transition-all" style={{ width: `${bayes.p_cosmetic * 100}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+                      <span className="text-[10px] text-slate-400 block font-semibold uppercase">P(Severe Loss | e)</span>
+                      <span className="text-base font-bold font-mono text-rose-400">
+                        {(bayes.p_severe_loss * 100).toFixed(1)}%
+                      </span>
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div className="bg-rose-500 h-full rounded-full transition-all" style={{ width: `${bayes.p_severe_loss * 100}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mathematical Derivation Steps */}
+                  {bayes.mathematical_derivation && (
+                    <div className="text-[11px] bg-slate-950/90 p-3 rounded-lg border border-slate-800/80 space-y-1 font-mono text-slate-300">
+                      <div className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider flex items-center gap-1.5 mb-1">
+                        <GitBranch className="w-3 h-3 text-indigo-400" /> Mathematical Derivation (Exact Bayes Inference):
+                      </div>
+                      {bayes.mathematical_derivation.map((step, idx) => (
+                        <div key={idx} className="text-slate-400 pl-1 text-[10px]">• {step}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Proactive Prevention Recommendation */}
               <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 flex items-start gap-3">

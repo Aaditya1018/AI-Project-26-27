@@ -74,6 +74,7 @@ class ExplainabilityReport(BaseModel):
     final_score: float
     factors: List[ExplainabilityFactor]
     prevention_recommendation: str
+    bayesian_inference: Optional[Dict[str, Any]] = None
 
 class EventBase(BaseModel):
     bay_id: str

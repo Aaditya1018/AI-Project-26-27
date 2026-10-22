@@ -26,6 +26,7 @@ from backend.simulation.scenario_runner import simulator
 from backend.conversational_ai.assistant import GroundedWarehouseAssistant
 from backend.conversational_ai.rca_generator import RcaGenerator
 from backend.storage.media_manager import media_manager
+from backend.risk_engine.bayesian_network import bayesian_engine, WarehouseDamageBayesianNetwork
 
 from contextlib import asynccontextmanager
 
@@ -176,6 +177,16 @@ def get_events(
             exp = json.loads(e["explainability"]) if e.get("explainability") else {}
         except Exception:
             t, exp = {}, {}
+        if isinstance(exp, dict) and not exp.get("bayesian_inference"):
+            ev = bayesian_engine.discretize_evidence(
+                product_category_str=e.get("product_category", "General Cargo"),
+                drop_height_m=t.get("drop_height_m", 0.0),
+                kinetic_energy_j=t.get("kinetic_impact_energy_j", 0.0),
+                rough_decel_mps2=t.get("rough_impact_decel_mps2", 0.0),
+                tilt_deg=t.get("tilt_angle_deg", 0.0),
+                overhang_pct=t.get("pallet_overhang_pct", 0.0)
+            )
+            exp["bayesian_inference"] = bayesian_engine.infer_damage_probability(ev).model_dump()
         results.append({
             "id": e["id"],
             "timestamp": e["timestamp"],
@@ -207,6 +218,16 @@ def get_event_detail(event_id: str):
         exp = json.loads(e["explainability"]) if e.get("explainability") else {}
     except Exception:
         t, exp = {}, {}
+    if isinstance(exp, dict) and not exp.get("bayesian_inference"):
+        ev = bayesian_engine.discretize_evidence(
+            product_category_str=e.get("product_category", "General Cargo"),
+            drop_height_m=t.get("drop_height_m", 0.0),
+            kinetic_energy_j=t.get("kinetic_impact_energy_j", 0.0),
+            rough_decel_mps2=t.get("rough_impact_decel_mps2", 0.0),
+            tilt_deg=t.get("tilt_angle_deg", 0.0),
+            overhang_pct=t.get("pallet_overhang_pct", 0.0)
+        )
+        exp["bayesian_inference"] = bayesian_engine.infer_damage_probability(ev).model_dump()
     return {
         "id": e["id"],
         "timestamp": e["timestamp"],
@@ -523,6 +544,60 @@ def stream_uploaded_video_file(filename: str):
             raise HTTPException(status_code=404, detail="Video file not found")
     return FileResponse(p, media_type="video/mp4")
 
+
+# ----------------- Module 5: Bayesian Belief Network Endpoints -----------------
+
+@app.get("/api/bayesian/network")
+def get_bayesian_network_spec():
+    """
+    Returns Module 5 Bayesian Belief Network DAG topology, state spaces, priors, and CPTs.
+    """
+    return {
+        "academic_module": "Module 5: Uncertainty - Probabilistic Reasoning",
+        "syllabus_concepts": [
+            "Directed Acyclic Graph (DAG) Factorization",
+            "Prior and Posterior Probabilities",
+            "Conditional Probability Tables (CPT)",
+            "Inference by Bayes Theorem and Enumeration",
+            "Latent Variable Reasoning under Sensor Uncertainty"
+        ],
+        "nodes": [
+            {"id": "Fragility", "type": "Observable (Prior)", "states": WarehouseDamageBayesianNetwork.STATES_FRAGILITY, "priors": WarehouseDamageBayesianNetwork.PRIOR_FRAGILITY},
+            {"id": "DropHeight", "type": "Observable (Prior)", "states": WarehouseDamageBayesianNetwork.STATES_DROP_HEIGHT, "priors": WarehouseDamageBayesianNetwork.PRIOR_DROP_HEIGHT},
+            {"id": "TiltHazard", "type": "Observable (Prior)", "states": WarehouseDamageBayesianNetwork.STATES_TILT, "priors": WarehouseDamageBayesianNetwork.PRIOR_TILT},
+            {"id": "ImpactShock", "type": "Observable (Conditional)", "states": WarehouseDamageBayesianNetwork.STATES_IMPACT, "parents": ["DropHeight"]},
+            {"id": "InternalDamage", "type": "Latent Hypothesis", "states": WarehouseDamageBayesianNetwork.STATES_DAMAGE, "parents": ["Fragility", "ImpactShock", "TiltHazard"]}
+        ],
+        "cpt_impact_given_height": WarehouseDamageBayesianNetwork.CPT_IMPACT_GIVEN_HEIGHT
+    }
+
+class BayesianInferenceRequest(BaseModel):
+    product_category: Optional[str] = "Electronics & Fragile"
+    drop_height_m: Optional[float] = 1.2
+    kinetic_impact_energy_j: Optional[float] = 75.0
+    rough_impact_decel_mps2: Optional[float] = 18.5
+    tilt_angle_deg: Optional[float] = 15.0
+    pallet_overhang_pct: Optional[float] = 20.0
+    explicit_evidence: Optional[Dict[str, str]] = None
+
+@app.post("/api/bayesian/infer")
+def infer_bayesian_damage(req: BayesianInferenceRequest):
+    """
+    Executes exact Bayesian inference P(InternalDamage | Evidence) using Bayes' Theorem.
+    """
+    if req.explicit_evidence:
+        evidence = req.explicit_evidence
+    else:
+        evidence = bayesian_engine.discretize_evidence(
+            product_category_str=req.product_category or "General Cargo",
+            drop_height_m=req.drop_height_m or 0.0,
+            kinetic_energy_j=req.kinetic_impact_energy_j or 0.0,
+            rough_decel_mps2=req.rough_impact_decel_mps2 or 0.0,
+            tilt_deg=req.tilt_angle_deg or 0.0,
+            overhang_pct=req.pallet_overhang_pct or 0.0
+        )
+    result = bayesian_engine.infer_damage_probability(evidence)
+    return result
 
 # ----------------- WebSockets -----------------
 

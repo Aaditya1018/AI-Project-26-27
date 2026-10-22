@@ -8,6 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt ./backend/
+
+# Install CPU-only PyTorch first (saves ~3GB vs full CUDA build)
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
 RUN pip install --no-cache-dir -r ./backend/requirements.txt
 
 COPY backend/ ./backend/
